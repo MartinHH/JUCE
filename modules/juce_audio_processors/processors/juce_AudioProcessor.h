@@ -398,6 +398,11 @@ public:
 
     /** Returns the value of a parameter as a text string. */
     virtual const String getParameterText (int parameterIndex) = 0;
+    
+    /** Returns the string representation the given parameter would have if it was set
+        to the given value.
+     */
+    virtual const String getParameterText (int parameterIndex, float parameterValue) = 0;
 
     /** Returns the name of a parameter as a text string with a preferred maximum length.
         If you want to provide customised short versions of your parameter names that
@@ -416,6 +421,14 @@ public:
         and truncate the result.
     */
     virtual String getParameterText (int parameterIndex, int maximumStringLength);
+    
+    /** Relates to getParameterText(int, float) just like getParameterText(int, int) relates
+        to getParameterText(int, int).
+        If you don't override it, the default implementation will call getParameterText(int,
+        float), and truncate the result.
+     */
+    virtual String getParameterText (int parameterIndex, float parameterValue,
+                                     int maximumStringLength);
 
     /** Returns the number of discrete steps that this parameter can represent.
         The default return value if you don't implement this method is 0x7fffffff.

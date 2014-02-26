@@ -251,6 +251,19 @@ public:
         id = 0;
         return kNotImplemented;
     }
+    
+    //==============================================================================
+    virtual tresult getParamStringByValue (Vst::ParamID id, Vst::ParamValue valueNormalized,
+                                           Vst::String128 string)
+    {
+        if( audioProcessor != nullptr )
+        {
+            toString128 (string, getPluginInstance()->getParameterText (id, valueNormalized, 128));
+            return kResultTrue;
+        }
+        
+        return kResultFalse;
+    }
 
     //==============================================================================
     IPlugView* PLUGIN_API createView (const char* name) override

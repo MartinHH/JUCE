@@ -128,6 +128,12 @@ String AudioProcessor::getParameterText (int parameterIndex, int maximumStringLe
     return getParameterText (parameterIndex).substring (0, maximumStringLength);
 }
 
+String AudioProcessor::getParameterText (int parameterIndex, float parameterValue,
+                                         int maximumStringLength)
+{
+    return getParameterText (parameterIndex, parameterValue).substring (0, maximumStringLength);
+}
+
 int AudioProcessor::getParameterNumSteps (int /*parameterIndex*/)        { return 0x7fffffff; }
 float AudioProcessor::getParameterDefaultValue (int /*parameterIndex*/)  { return 0.0f; }
 
