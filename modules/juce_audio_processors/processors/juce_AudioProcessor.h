@@ -423,7 +423,7 @@ public:
     virtual String getParameterText (int parameterIndex, int maximumStringLength);
     
     /** Relates to getParameterText(int, float) just like getParameterText(int, int) relates
-        to getParameterText(int, int).
+        to getParameterText(int).
         If you don't override it, the default implementation will call getParameterText(int,
         float), and truncate the result.
      */
