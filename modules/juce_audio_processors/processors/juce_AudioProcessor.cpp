@@ -118,6 +118,11 @@ void AudioProcessor::setParameterNotifyingHost (const int parameterIndex,
     sendParamChangeMessageToListeners (parameterIndex, newValue);
 }
 
+const String AudioProcessor::getParameterTextByValue(int parameterIndex, float parameterValue)
+{
+    return getParameterText(parameterIndex);
+}
+
 String AudioProcessor::getParameterName (int parameterIndex, int maximumStringLength)
 {
     return getParameterName (parameterIndex).substring (0, maximumStringLength);
@@ -128,7 +133,7 @@ String AudioProcessor::getParameterText (int parameterIndex, int maximumStringLe
     return getParameterText (parameterIndex).substring (0, maximumStringLength);
 }
 
-String AudioProcessor::getParameterText (int parameterIndex, float parameterValue,
+String AudioProcessor::getParameterTextByValue (int parameterIndex, float parameterValue,
                                          int maximumStringLength)
 {
     return getParameterText (parameterIndex, parameterValue).substring (0, maximumStringLength);

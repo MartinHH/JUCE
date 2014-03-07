@@ -260,7 +260,7 @@ public:
     {
         if( audioProcessor != nullptr )
         {
-            toString128 (string, getPluginInstance()->getParameterText (id, valueNormalized, 128));
+            toString128 (string, getPluginInstance()->getParameterTextByValue (id, valueNormalized, 128));
             return kResultTrue;
         }
         

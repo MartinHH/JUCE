@@ -401,8 +401,12 @@ public:
     
     /** Returns the string representation the given parameter would have if it was set
         to the given value.
+        Overriding this is strongly recommended when developing for VST3. If it's not
+        overriden, the default implementation will return the result of getParameterText
+        (int) (a default implementation was necessary for reasons of compatibility with
+        older/original JUCE versions).
      */
-    virtual const String getParameterText (int parameterIndex, float parameterValue) = 0;
+    virtual const String getParameterTextByValue (int parameterIndex, float parameterValue);
 
     /** Returns the name of a parameter as a text string with a preferred maximum length.
         If you want to provide customised short versions of your parameter names that
@@ -422,12 +426,12 @@ public:
     */
     virtual String getParameterText (int parameterIndex, int maximumStringLength);
     
-    /** Relates to getParameterText(int, float) just like getParameterText(int, int) relates
-        to getParameterText(int).
-        If you don't override it, the default implementation will call getParameterText(int,
-        float), and truncate the result.
+    /** Relates to getParameterTextByValue(int, float) just like getParameterText(int, int)
+        relates to getParameterText(int).
+        If you don't override it, the default implementation will call getParameterTextByValue
+        (int, float) and truncate the result.
      */
-    virtual String getParameterText (int parameterIndex, float parameterValue,
+    virtual String getParameterTextByValue (int parameterIndex, float parameterValue,
                                      int maximumStringLength);
 
     /** Returns the number of discrete steps that this parameter can represent.
