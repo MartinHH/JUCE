@@ -793,7 +793,7 @@ public:
     {
         const int headerLen = htonl (*(juce::int32*) (data + 4));
         const struct fxBank* bank = (const struct fxBank*) (data + (8 + headerLen));
-        const int version = htonl (bank->version);
+        const int version = htonl (bank->version); (void) version;
 
         jassert ('VstW' == htonl (*(juce::int32*) data));
         jassert (1 == htonl (*(juce::int32*) (data + 8))); // version should be 1 according to Steinberg's docs
@@ -923,12 +923,12 @@ public:
 
         zerostruct (bank);
         bank.chunkMagic         = htonl (cMagic);
-        bank.byteSize           = htonl (bankBlockSize - 8 + mem.getSize());
+        bank.byteSize           = htonl (bankBlockSize - 8 + (unsigned int) mem.getSize());
         bank.fxMagic            = htonl (chunkBankMagic);
         bank.version            = htonl (2);
         bank.fxID               = htonl (JucePlugin_VSTUniqueID);
         bank.fxVersion          = htonl (JucePlugin_VersionCode);
-        bank.content.data.size  = htonl (mem.getSize());
+        bank.content.data.size  = htonl ((unsigned int) mem.getSize());
 
         status = state->write (&bank, bankBlockSize);
 
@@ -1238,7 +1238,7 @@ public:
         }
 
         for (int i = 0; i < numOutputChans; ++i)
-            FloatVectorOperations::copy (data.outputs[0].channelBuffers32[i], buffer.getSampleData (i), (int) data.numSamples);
+            FloatVectorOperations::copy (data.outputs[0].channelBuffers32[i], buffer.getReadPointer (i), (int) data.numSamples);
 
         // clear extra busses..
         if (data.outputs != nullptr)
