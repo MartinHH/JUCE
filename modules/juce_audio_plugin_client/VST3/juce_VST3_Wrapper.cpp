@@ -264,8 +264,8 @@ public:
     }
     
     //==============================================================================
-    virtual tresult getParamStringByValue (Vst::ParamID id, Vst::ParamValue valueNormalized,
-                                           Vst::String128 string)
+    tresult PLUGIN_API getParamStringByValue (Vst::ParamID id, Vst::ParamValue valueNormalized,
+                                           Vst::String128 string) override
     {
         if( audioProcessor != nullptr )
         {
