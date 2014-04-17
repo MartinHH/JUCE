@@ -128,6 +128,13 @@ String AudioProcessor::getParameterText (int parameterIndex, int maximumStringLe
     return getParameterText (parameterIndex).substring (0, maximumStringLength);
 }
 
+float AudioProcessor::getParameterByText(int parameterIndex, const String& parameterText){
+    // in most cases, this is not what the host expects - but it is the same thing
+    // Steinberg's default implementation of IEditController::getParamStringByValue
+    // would do:
+    return parameterText.getFloatValue();
+}
+
 int AudioProcessor::getParameterNumSteps (int /*parameterIndex*/)        { return 0x7fffffff; }
 float AudioProcessor::getParameterDefaultValue (int /*parameterIndex*/)  { return 0.0f; }
 
