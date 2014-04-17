@@ -270,6 +270,21 @@ public:
         if( audioProcessor != nullptr )
         {
             toString128 (string, getPluginInstance()->getParameterTextByValue (id, valueNormalized, 128));
+            
+            return kResultTrue;
+        }
+        
+        return kResultFalse;
+    }
+
+    //==============================================================================
+    tresult PLUGIN_API getParamValueByString(Vst::ParamID id, Vst::TChar* string,
+                                             Vst::ParamValue& valueNormalized) override
+    {
+        if( audioProcessor != nullptr )
+        {
+            valueNormalized = getPluginInstance()->getParameterByText(id, toString(string));
+            
             return kResultTrue;
         }
         

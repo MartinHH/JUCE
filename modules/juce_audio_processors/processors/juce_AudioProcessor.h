@@ -399,6 +399,7 @@ public:
     /** Returns the value of a parameter as a text string. */
     virtual const String getParameterText (int parameterIndex) = 0;
     
+
     /** Returns the string representation the given parameter would have if it was set
         to the given value.
         Overriding this is strongly recommended when developing for VST3. If it's not
@@ -407,6 +408,16 @@ public:
         older/original JUCE versions).
      */
     virtual const String getParameterTextByValue (int parameterIndex, float parameterValue);
+
+    /** Returns the value a parameter would have if it was set to the value
+        represented by the parameterText string.
+     
+        The host will expect the value returned to be between 0 and 1.0.
+     
+        @see getParameterText
+     */
+    virtual float getParameterByText(int parameterIndex, const String& parameterText);
+
 
     /** Returns the name of a parameter as a text string with a preferred maximum length.
         If you want to provide customised short versions of your parameter names that
