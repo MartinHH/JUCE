@@ -262,6 +262,16 @@ public:
                 outWritable = true;
                 return noErr;
            #endif
+                    
+            case kAudioUnitProperty_ParameterStringFromValue:
+                outWritable = false;
+                outDataSize = sizeof(AudioUnitParameterStringFromValue);
+                return noErr;
+                    
+            case kAudioUnitProperty_ParameterValueFromString:
+                outWritable = false;
+                outDataSize = sizeof(AudioUnitParameterValueFromString);
+                return noErr;
 
             default: break;
             }
@@ -327,7 +337,32 @@ public:
                 }
                #endif
 
+                case kAudioUnitProperty_ParameterValueFromString:
+                {
+                    AudioUnitParameterValueFromString* val = (AudioUnitParameterValueFromString*) outData;
+
+                    std::string valStr(CFStringGetCStringPtr(val->inString, CFStringGetSystemEncoding()));
+                    if (juceFilter != nullptr){
+                        val->outValue = juceFilter->getParameterByText((int)val->inParamID, valStr);
+                        return noErr;
+                    }
+                }
+                    
+                    break;
+                    
+                case kAudioUnitProperty_ParameterStringFromValue:
+                {
+                    AudioUnitParameterStringFromValue *str = (AudioUnitParameterStringFromValue *)outData;
+                    if (juceFilter != nullptr){
+                        str->outString = juceFilter->getParameterTextByValue((int)str->inParamID,
+                                                                             *(str->inValue)).toCFString();
+                        return noErr;
+                    }
+                }
+                    break;
+                    
                 default: break;
+                    
             }
         }
 
@@ -466,7 +501,8 @@ public:
         {
             outParameterInfo.flags = (UInt32) (kAudioUnitParameterFlag_IsWritable
                                                 | kAudioUnitParameterFlag_IsReadable
-                                                | kAudioUnitParameterFlag_HasCFNameString);
+                                                | kAudioUnitParameterFlag_HasCFNameString
+                                                | kAudioUnitParameterFlag_ValuesHaveStrings);
 
             const String name (juceFilter->getParameterName (index));
 
