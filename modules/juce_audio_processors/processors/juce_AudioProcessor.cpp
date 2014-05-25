@@ -120,6 +120,8 @@ void AudioProcessor::setParameterNotifyingHost (const int parameterIndex,
 
 const String AudioProcessor::getParameterTextByValue(int parameterIndex, float parameterValue)
 {
+    // this is not a sensible solution and should be overriden - this is only
+    // implemented here for backwards compatibility:
     return getParameterText(parameterIndex);
 }
 
@@ -140,9 +142,9 @@ String AudioProcessor::getParameterTextByValue (int parameterIndex, float parame
 }
 
 float AudioProcessor::getParameterByText(int parameterIndex, const String& parameterText){
-    // in most cases, this is not what the host expects - but it is the same thing
-    // Steinberg's default implementation of IEditController::getParamStringByValue
-    // would do:
+    // in most cases, this is not what the host expects, so this sould be overriden - but
+    // it is the same thing Steinberg's default implementation of
+    // IEditController::getParamStringByValue would do:
     return parameterText.getFloatValue();
 }
 
