@@ -61,23 +61,6 @@ namespace juce
 using namespace Steinberg;
 
 //==============================================================================
-class JuceLibraryRefCount
-{
-public:
-    JuceLibraryRefCount()   { if ((getCount()++) == 0) initialiseJuce_GUI(); }
-    ~JuceLibraryRefCount()  { if ((--getCount()) == 0) shutdownJuce_GUI(); }
-
-private:
-    int& getCount() noexcept
-    {
-        static int count = 0;
-        return count;
-    }
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceLibraryRefCount)
-};
-
-//==============================================================================
 #if JUCE_MAC
  extern void initialiseMac();
  extern void* attachComponentToWindowRef (Component*, void* parent, bool isNSView);
@@ -104,6 +87,7 @@ public:
 private:
     Atomic<int> refCount;
     ScopedPointer<AudioProcessor> audioProcessor;
+    ScopedJuceInitialiser_GUI libraryInitialiser;
 
     JuceAudioProcessor() JUCE_DELETED_FUNCTION;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceAudioProcessor)
@@ -329,7 +313,7 @@ public:
 private:
     //==============================================================================
     ComSmartPtr<JuceAudioProcessor> audioProcessor;
-    const JuceLibraryRefCount juceCount;
+    ScopedJuceInitialiser_GUI libraryInitialiser;
 
     //==============================================================================
     void setupParameters()
@@ -502,7 +486,7 @@ private:
                 if (pluginEditor != nullptr)
                 {
                     PopupMenu::dismissAllActiveMenus();
-                    pluginEditor->getAudioProcessor()->editorBeingDeleted (pluginEditor);
+                    pluginEditor->processor.editorBeingDeleted (pluginEditor);
                 }
             }
 
@@ -532,7 +516,7 @@ private:
                    #if JUCE_WINDOWS
                     setSize (w, h);
                    #else
-                    if (owner.macHostWindow != nullptr)
+                    if (owner.macHostWindow != nullptr && ! getHostType().isWavelab())
                         juce::setNativeHostWindowSize (owner.macHostWindow, this, w, h, owner.isNSView);
                    #endif
 
@@ -540,6 +524,9 @@ private:
                     {
                         ViewRect newSize (0, 0, w, h);
                         owner.plugFrame->resizeView (&owner, &newSize);
+
+                        if (getHostType().isWavelab())
+                            setBounds (0, 0, w, h);
                     }
                 }
             }
@@ -566,6 +553,8 @@ private:
        #if JUCE_WINDOWS
         WindowsHooks hooks;
        #endif
+
+        ScopedJuceInitialiser_GUI libraryInitialiser;
 
         //==============================================================================
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceVST3Editor)
@@ -1366,7 +1355,7 @@ private:
     MidiBuffer midiBuffer;
     Array<float*> channelList;
 
-    const JuceLibraryRefCount juceCount;
+    ScopedJuceInitialiser_GUI libraryInitialiser;
 
     //==============================================================================
     void addBusTo (Vst::BusList& busList, Vst::Bus* newBus)
@@ -1398,14 +1387,21 @@ private:
         paramPreset = 'prst'
     };
 
+    static int getNumChannels (Vst::BusList& busList)
+    {
+        Vst::BusInfo info;
+        info.channelCount = 0;
+
+        if (Vst::Bus* bus = busList.first())
+            bus->getInfo (info);
+
+        return (int) info.channelCount;
+    }
+
     void preparePlugin (double sampleRate, int bufferSize)
     {
-        Vst::BusInfo inputBusInfo, outputBusInfo;
-        audioInputs.first()->getInfo (inputBusInfo);
-        audioOutputs.first()->getInfo (outputBusInfo);
-
-        getPluginInstance().setPlayConfigDetails (inputBusInfo.channelCount,
-                                                  outputBusInfo.channelCount,
+        getPluginInstance().setPlayConfigDetails (getNumChannels (audioInputs),
+                                                  getNumChannels (audioOutputs),
                                                   sampleRate, bufferSize);
 
         getPluginInstance().prepareToPlay (sampleRate, bufferSize);
@@ -1724,7 +1720,7 @@ public:
 
 private:
     //==============================================================================
-    const JuceLibraryRefCount juceCount;
+    ScopedJuceInitialiser_GUI libraryInitialiser;
     Atomic<int> refCount;
     const PFactoryInfo factoryInfo;
     ComSmartPtr<Vst::IHostApplication> host;
