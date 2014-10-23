@@ -518,6 +518,8 @@ public:
             outParameterInfo.minValue = 0.0f;
             outParameterInfo.maxValue = 1.0f;
             outParameterInfo.defaultValue = juceFilter->getParameterDefaultValue (index);
+            jassert (outParameterInfo.defaultValue >= outParameterInfo.minValue
+                      && outParameterInfo.defaultValue <= outParameterInfo.maxValue);
             outParameterInfo.unit = kAudioUnitParameterUnit_Generic;
 
             return noErr;
@@ -594,13 +596,9 @@ public:
     {
         info.timeSigNumerator = 0;
         info.timeSigDenominator = 0;
-        info.timeInSamples = 0;
-        info.timeInSeconds = 0;
         info.editOriginTime = 0;
         info.ppqPositionOfLastBarStart = 0;
-        info.isPlaying = false;
         info.isRecording = false;
-        info.isLooping = false;
         info.ppqLoopStart = 0;
         info.ppqLoopEnd = 0;
 
@@ -637,19 +635,23 @@ public:
         }
 
         double outCurrentSampleInTimeLine, outCycleStartBeat, outCycleEndBeat;
-        Boolean playing, playchanged, looping;
+        Boolean playing = false, looping = false, playchanged;
 
         if (CallHostTransportState (&playing,
                                     &playchanged,
                                     &outCurrentSampleInTimeLine,
                                     &looping,
                                     &outCycleStartBeat,
-                                    &outCycleEndBeat) == noErr)
+                                    &outCycleEndBeat) != noErr)
         {
-            info.isPlaying = playing;
-            info.timeInSamples = (int64) outCurrentSampleInTimeLine;
-            info.timeInSeconds = outCurrentSampleInTimeLine / getSampleRate();
+            // If the host doesn't support this callback, use the sample time from lastTimeStamp:
+            outCurrentSampleInTimeLine = lastTimeStamp.mSampleTime;
         }
+
+        info.isPlaying = playing;
+        info.timeInSamples = (int64) (outCurrentSampleInTimeLine + 0.5);
+        info.timeInSeconds = info.timeInSamples / getSampleRate();
+        info.isLooping = looping;
 
         return true;
     }
@@ -1366,7 +1368,7 @@ public:
             }
             else
             {
-                jassertfalse // can't get a pointer to our effect
+                jassertfalse; // can't get a pointer to our effect
             }
         }
 

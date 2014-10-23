@@ -308,7 +308,7 @@ struct AAXClasses
             }
         }
 
-        virtual AAX_Result GetViewSize (AAX_Point* viewSize) const override
+        AAX_Result GetViewSize (AAX_Point* viewSize) const override
         {
             if (component != nullptr)
             {
@@ -353,7 +353,10 @@ struct AAXClasses
                 addAndMakeVisible (pluginEditor = plugin.createEditorIfNeeded());
 
                 if (pluginEditor != nullptr)
+                {
                     setBounds (pluginEditor->getLocalBounds());
+                    pluginEditor->addMouseListener (this, true);
+                }
             }
 
             ~ContentWrapperComponent()
@@ -361,6 +364,7 @@ struct AAXClasses
                 if (pluginEditor != nullptr)
                 {
                     PopupMenu::dismissAllActiveMenus();
+                    pluginEditor->removeMouseListener (this);
                     pluginEditor->processor.editorBeingDeleted (pluginEditor);
                 }
             }
@@ -369,6 +373,26 @@ struct AAXClasses
             {
                 g.fillAll (Colours::black);
             }
+
+            template <typename MethodType>
+            void callMouseMethod (const MouseEvent& e, MethodType method)
+            {
+                if (AAX_IViewContainer* vc = owner.GetViewContainer())
+                {
+                    const int parameterIndex = pluginEditor->getControlParameterIndex (*e.eventComponent);
+
+                    if (parameterIndex >= 0)
+                    {
+                        uint32_t mods = 0;
+                        vc->GetModifiers (&mods);
+                        (vc->*method) (IndexAsParamID (parameterIndex), mods);
+                    }
+                }
+            }
+
+            void mouseDown (const MouseEvent& e) override  { callMouseMethod (e, &AAX_IViewContainer::HandleParameterMouseDown); }
+            void mouseUp   (const MouseEvent& e) override  { callMouseMethod (e, &AAX_IViewContainer::HandleParameterMouseUp); }
+            void mouseDrag (const MouseEvent& e) override  { callMouseMethod (e, &AAX_IViewContainer::HandleParameterMouseDrag); }
 
             void childBoundsChanged (Component*) override
             {
@@ -550,28 +574,27 @@ struct AAXClasses
 
         AAX_Result SetParameterNormalizedValue (AAX_CParamID paramID, double newValue) override
         {
-            if (! isBypassParam (paramID))
-            {
-                if (AAX_IParameter* p = const_cast<AAX_IParameter*> (mParameterManager.GetParameterByID (paramID)))
-                    p->SetValueWithFloat ((float) newValue);
+            if (isBypassParam (paramID))
+                return AAX_CEffectParameters::SetParameterNormalizedValue (paramID, newValue);
 
-                pluginInstance->setParameter (getParamIndexFromID (paramID), (float) newValue);
-            }
+            if (AAX_IParameter* p = const_cast<AAX_IParameter*> (mParameterManager.GetParameterByID (paramID)))
+                p->SetValueWithFloat ((float) newValue);
 
+            pluginInstance->setParameter (getParamIndexFromID (paramID), (float) newValue);
             return AAX_SUCCESS;
         }
 
-        AAX_Result SetParameterNormalizedRelative (AAX_CParamID paramID, double newValue) override
+        AAX_Result SetParameterNormalizedRelative (AAX_CParamID paramID, double newDeltaValue) override
         {
-            if (! isBypassParam (paramID))
-            {
-                const int paramIndex = getParamIndexFromID (paramID);
-                const float oldValue = pluginInstance->getParameter (paramIndex);
-                pluginInstance->setParameter (paramIndex, jlimit (0.0f, 1.0f, (float) (oldValue + newValue)));
+            if (isBypassParam (paramID))
+                return AAX_CEffectParameters::SetParameterNormalizedRelative (paramID, newDeltaValue);
 
-                if (AAX_IParameter* p = const_cast<AAX_IParameter*> (mParameterManager.GetParameterByID (paramID)))
-                    p->SetValueWithFloat ((float) newValue);
-            }
+            const int paramIndex = getParamIndexFromID (paramID);
+            const float newValue = pluginInstance->getParameter (paramIndex) + (float) newDeltaValue;
+            pluginInstance->setParameter (paramIndex, jlimit (0.0f, 1.0f, newValue));
+
+            if (AAX_IParameter* p = const_cast<AAX_IParameter*> (mParameterManager.GetParameterByID (paramID)))
+                p->SetValueWithFloat (newValue);
 
             return AAX_SUCCESS;
         }
@@ -601,7 +624,11 @@ struct AAXClasses
         AAX_Result GetParameterDefaultNormalizedValue (AAX_CParamID paramID, double* result) const override
         {
             if (! isBypassParam (paramID))
+            {
                 *result = (double) pluginInstance->getParameterDefaultValue (getParamIndexFromID (paramID));
+
+                jassert (*result >= 0 && *result <= 1.0f);
+            }
 
             return AAX_SUCCESS;
         }
@@ -737,35 +764,6 @@ struct AAXClasses
         }
 
     private:
-        struct IndexAsParamID
-        {
-            inline explicit IndexAsParamID (int i) noexcept : index (i) {}
-
-            operator AAX_CParamID() noexcept
-            {
-                jassert (index >= 0);
-
-                char* t = name + sizeof (name);
-                *--t = 0;
-                int v = index;
-
-                do
-                {
-                    *--t = (char) ('0' + (v % 10));
-                    v /= 10;
-
-                } while (v > 0);
-
-                return static_cast<AAX_CParamID> (t);
-            }
-
-        private:
-            int index;
-            char name[32];
-
-            JUCE_DECLARE_NON_COPYABLE (IndexAsParamID)
-        };
-
         void process (float* const* channels, const int numChans, const int bufferSize,
                       const bool bypass, AAX_IMIDINode* midiNodeIn, AAX_IMIDINode* midiNodesOut)
         {
@@ -798,6 +796,9 @@ struct AAXClasses
                 if (lastBufferSize != bufferSize)
                 {
                     lastBufferSize = bufferSize;
+                    pluginInstance->setPlayConfigDetails (pluginInstance->getNumInputChannels(),
+                                                          pluginInstance->getNumOutputChannels(),
+                                                          sampleRate, bufferSize);
                     pluginInstance->prepareToPlay (sampleRate, bufferSize);
                 }
 
@@ -921,6 +922,36 @@ struct AAXClasses
     };
 
     //==============================================================================
+    struct IndexAsParamID
+    {
+        inline explicit IndexAsParamID (int i) noexcept : index (i) {}
+
+        operator AAX_CParamID() noexcept
+        {
+            jassert (index >= 0);
+
+            char* t = name + sizeof (name);
+            *--t = 0;
+            int v = index;
+
+            do
+            {
+                *--t = (char) ('0' + (v % 10));
+                v /= 10;
+
+            } while (v > 0);
+
+            return static_cast<AAX_CParamID> (t);
+        }
+
+    private:
+        int index;
+        char name[32];
+
+        JUCE_DECLARE_NON_COPYABLE (IndexAsParamID)
+    };
+
+    //==============================================================================
     static void AAX_CALLBACK algorithmProcessCallback (JUCEAlgorithmContext* const instancesBegin[],
                                                        const void* const instancesEnd)
     {
@@ -974,7 +1005,10 @@ struct AAXClasses
         // This value needs to match the RTAS wrapper's Type ID, so that
         // the host knows that the RTAS/AAX plugins are equivalent.
         properties->AddProperty (AAX_eProperty_PlugInID_Native,     'jcaa' + channelConfigIndex);
+
+       #if ! JucePlugin_AAXDisableAudioSuite
         properties->AddProperty (AAX_eProperty_PlugInID_AudioSuite, 'jyaa' + channelConfigIndex);
+       #endif
 
        #if JucePlugin_AAXDisableMultiMono
         properties->AddProperty (AAX_eProperty_Constraint_MultiMonoSupport, false);
